@@ -18,12 +18,8 @@
 #include <string.h>
 #include <errno.h>
 
-#include "version.h"
 #include "utils.h"
 #include "ip_common.h"
-#include "namespace.h"
-#include "color.h"
-#include "rt_names.h"
 
 int preferred_family = AF_UNSPEC;
 int human_readable;

@@ -30,11 +30,8 @@
 #include <linux/sockios.h>
 #include <linux/net_namespace.h>
 
-#include "rt_names.h"
 #include "utils.h"
-#include "ll_map.h"
 #include "ip_common.h"
-#include "color.h"
 
 enum {
 	IPADD_LIST,

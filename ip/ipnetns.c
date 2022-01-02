@@ -19,10 +19,7 @@
 #include <linux/net_namespace.h>
 
 #include "utils.h"
-#include "list.h"
 #include "ip_common.h"
-#include "namespace.h"
-#include "json_print.h"
 
 
 /* This socket is used to get nsid */
