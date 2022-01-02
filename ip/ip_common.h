@@ -30,6 +30,7 @@ struct link_filter {
 int get_operstate(const char *name);//
 int print_linkinfo(struct nlmsghdr *n, void *arg);//
 int print_addrinfo(struct nlmsghdr *n, void *arg);//
+void ipaddr_reset_filter(int oneline, int ifindex);
 
 void netns_nsid_socket_init(void);//
 int do_ipaddr(int argc, char **argv);//
