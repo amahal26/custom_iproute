@@ -193,8 +193,6 @@ int print_addrinfo(struct nlmsghdr *n, void *arg)
 	parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa),
 		     n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
 
-	ifa_flags = get_ifa_flags(ifa, rta_tb[IFA_FLAGS]);
-
 	if (!rta_tb[IFA_LOCAL])
 		rta_tb[IFA_LOCAL] = rta_tb[IFA_ADDRESS];
 
