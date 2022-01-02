@@ -40,7 +40,6 @@ enum {
 };
 
 static struct link_filter filter;
-static int do_link;
 
 static void usage(void) __attribute__((noreturn));
 
@@ -112,40 +111,6 @@ static void print_operstate(FILE *f, __u8 state)
 	}
 }
 
-static int print_linkinfo_brief(FILE *fp, const char *name,
-				const struct ifinfomsg *ifi,
-				struct rtattr *tb[])
-{
-	unsigned int m_flag = 0;
-
-	m_flag = print_name_and_link("%-16s ", name, tb);
-
-	if (tb[IFLA_OPERSTATE])
-		print_operstate(fp, rta_getattr_u8(tb[IFLA_OPERSTATE]));
-
-	if (filter.family == AF_PACKET) {
-		SPRINT_BUF(b1);
-
-		if (tb[IFLA_ADDRESS]) {
-			print_color_string(PRINT_ANY, COLOR_MAC,
-					   "address", "%s ",
-					   ll_addr_n2a(
-						   RTA_DATA(tb[IFLA_ADDRESS]),
-						   RTA_PAYLOAD(tb[IFLA_ADDRESS]),
-						   ifi->ifi_type,
-						   b1, sizeof(b1)));
-		}
-	}
-
-	if (filter.family == AF_PACKET) {
-		print_link_flags(fp, ifi->ifi_flags, m_flag);
-		print_string(PRINT_FP, NULL, "%s", "\n");
-	}
-
-	fflush(fp);
-	return 0;
-}
-
 int print_linkinfo(struct nlmsghdr *n, void *arg)
 {
 	FILE *fp = (FILE *)arg;
@@ -165,26 +130,6 @@ int print_linkinfo(struct nlmsghdr *n, void *arg)
 	print_string(PRINT_FP, NULL, "%s", "\n");
 	fflush(fp);
 	return 1;
-}
-
-static int flush_update(void)
-{
-
-	/*
-	 * Note that the kernel may delete multiple addresses for one
-	 * delete request (e.g. if ipv4 address promotion is disabled).
-	 * Since a flush operation is really a series of delete requests
-	 * its possible that we may request an address delete that has
-	 * already been done by the kernel. Therefore, ignore EADDRNOTAVAIL
-	 * errors returned from a flush request
-	 */
-	if ((rtnl_send_check(&rth, filter.flushb, filter.flushp) < 0) &&
-	    (errno != EADDRNOTAVAIL)) {
-		perror("Failed to send flush request");
-		return -1;
-	}
-	filter.flushp = 0;
-	return 0;
 }
 
 static unsigned int get_ifa_flags(struct ifaddrmsg *ifa,
@@ -215,18 +160,6 @@ static const struct ifa_flag_data_t {
 	{ .name = "autojoin",		.mask = IFA_F_MCAUTOJOIN,	.readonly = false,	.v6only = false},
 	{ .name = "stable-privacy",	.mask = IFA_F_STABLE_PRIVACY, 	.readonly = true,	.v6only = true},
 };
-
-/* Returns a pointer to the data structure for a particular interface flag, or null if no flag could be found */
-static const struct ifa_flag_data_t* lookup_flag_data_by_name(const char* flag_name) {
-	unsigned int i;
-
-	for (i = 0; i < ARRAY_SIZE(ifa_flag_data); ++i) {
-		if (strcmp(flag_name, ifa_flag_data[i].name) == 0)
-			return &ifa_flag_data[i];
-	}
-        return NULL;
-}
-
 
 static int ifa_label_match_rta(int ifindex, const struct rtattr *rta)
 {

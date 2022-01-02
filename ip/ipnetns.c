@@ -135,7 +135,7 @@ static int netns_exec(int argc, char **argv)
 	 * but do_cmd() will add a minus to this,
 	 * so let's add another one here to cancel it.
 	 */
-	return -cmd_exec("ip", "ip", !!batch_mode, do_switch, "713201");
+	return netns_exec(argc-1, argv+1);
 }
 
 static int invalid_name(const char *name)

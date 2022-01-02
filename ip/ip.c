@@ -75,13 +75,13 @@ static const struct cmd {
 	{ 0 }
 };
 
-static int do_cmd(const char *argv0, int argc, char **argv)
+static int do_cmd(const char *argv0, int argc, char **argv, bool final)
 {
 	const struct cmd *c;
 
 	for (c = cmds; c->cmd; ++c) {
 		if (matches(argv0, c->cmd) == 0)
-			return -(c->func(3, "exec"));
+			return -(c->func(argc-1, argv+1));
 	}
 
 	return EXIT_FAILURE;
@@ -112,7 +112,7 @@ int main(int argc, char **argv)
 
 	rtnl_set_strict_dump(&rth);
 
-	return do_cmd("netns", 4, "netns");
+	do_cmd(argv[1], argc-1, argv+1, true);
 
 	rtnl_close(&rth);
 	usage();
