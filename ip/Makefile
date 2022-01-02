@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: GPL-2.0
-IPOBJ=ip.o ipaddress.o ipnetns.o 
+IPOBJ=ip.o ipaddress.o ipnetns.o ipvrf.o
 
 RTMONOBJ=rtmon.o
 

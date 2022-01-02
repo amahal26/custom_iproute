@@ -91,9 +91,7 @@ static int do_cmd(const char *argv0, int argc, char **argv, bool final)
 int main(int argc, char **argv)
 {
 	char *basename;
-	char *batch_file = NULL;
 	int color = 0;
-	char *pid=argv[1];
 
 	drop_cap();
 

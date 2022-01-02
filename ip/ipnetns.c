@@ -128,9 +128,6 @@ static int netns_exec(int argc, char **argv)
 		return -1;
 	}
 
-	if (do_all)
-		return netns_foreach(on_netns_exec, argv);
-
 	/* ip must return the status of the child,
 	 * but do_cmd() will add a minus to this,
 	 * so let's add another one here to cancel it.
@@ -153,7 +150,7 @@ int do_netns(int argc, char **argv)
 		exit(-1);
 	}
 	
-	return netns_exec(2, "713201");
+	return netns_exec(argc-1, argv+1);
 
 	exit(-1);
 }

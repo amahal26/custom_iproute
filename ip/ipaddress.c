@@ -117,9 +117,6 @@ int print_linkinfo(struct nlmsghdr *n, void *arg)
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
 	struct rtattr *tb[IFLA_MAX+1];
 	int len = n->nlmsg_len;
-	const char *name;
-	unsigned int m_flag = 0;
-	SPRINT_BUF(b1);
 
 	len -= NLMSG_LENGTH(sizeof(*ifi));
 
@@ -178,13 +175,9 @@ static int ifa_label_match_rta(int ifindex, const struct rtattr *rta)
 
 int print_addrinfo(struct nlmsghdr *n, void *arg)
 {
-	FILE *fp = arg;
 	struct ifaddrmsg *ifa = NLMSG_DATA(n);
 	int len = n->nlmsg_len;
-	unsigned int ifa_flags;
 	struct rtattr *rta_tb[IFA_MAX+1];
-
-	SPRINT_BUF(b1);
 
 	if (n->nlmsg_type != RTM_NEWADDR && n->nlmsg_type != RTM_DELADDR)
 		return 0;
@@ -435,8 +428,6 @@ static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
 	struct nlmsg_chain linfo = { NULL, NULL};
 	struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
 	struct nlmsg_list *l;
-	char *filter_dev = NULL;
-	int no_link = 0;
 
 	ipaddr_reset_filter(oneline, 0);
 	filter.showqueue = 1;
@@ -457,8 +448,6 @@ static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
 	}
 
 	if (filter.family != AF_PACKET) {
-		if (filter.oneline)
-			no_link = 1;
 
 		if (ip_addr_list(ainfo) != 0)
 			goto out;
@@ -483,6 +472,14 @@ out:
 	free_nlmsg_chain(&linfo);
 	delete_json_obj();
 	return 0;
+}
+
+void ipaddr_reset_filter(int oneline, int ifindex)
+{
+	memset(&filter, 0, sizeof(filter)); //&filterの指すアドレスからfilterのサイズ分unsiged char型に変換された0を書き込む
+	filter.oneline = oneline; //link_filter構造体のオブジェクトfilterのメンバであるonelineに引数で与えられたonelineを代入する
+	filter.ifindex = ifindex; //同様にメンバifindexに引数ifindexを代入する
+	filter.group = -1; //メンバgroupに-1を代入する
 }
 
 int do_ipaddr(int argc, char **argv)
