@@ -41,7 +41,7 @@ enum {
 
 static struct link_filter filter;
 
-int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name,int *number)
+int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name,int *number)
 {
 	FILE *fp = (FILE *)arg;
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
@@ -52,10 +52,14 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name,int *number
 
 	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
 	*index=ifi->ifi_index;
-	if(strcmp("eth0",get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]))==0){
+	index+1;
+	if(rta_getattr_u32(tb[IFLA_LINK])){
+		printf("exist if number\n");
 		*number=rta_getattr_u32(tb[IFLA_LINK]);
+		number+1;
 	}
-	strcpy(name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
+	strcpy(*name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
+	*name+1;
 
 	fflush(fp);
 	return 1;
@@ -287,6 +291,9 @@ void make_iflist(void){
 	struct nlmsg_list *l;
 	struct nic_info *ninf=&nic_info;
 	int no_link = 0;
+	int *index=ninf->if_index[0];
+	int *number=ninf->if_number[0];
+	char **name=&ninf->if_name[0];
 
 	ipaddr_reset_filter(oneline, 0);
 	filter.showqueue = 1;
@@ -321,9 +328,6 @@ void make_iflist(void){
 		struct nlmsghdr *n = &l->h;
 		struct ifinfomsg *ifi = NLMSG_DATA(n);
 		int res = 0;
-		int *index=&ninf->if_index[i];
-		int *number=&ninf->if_number[i];
-		char *name=ninf->if_name[i];
 
 		open_json_object(NULL);
 		if (brief || !no_link)
@@ -347,26 +351,32 @@ int coll_name(char **argv){
 	struct nic_info *ninf=&nic_info;
 
     make_iflist();
+
+	printf("\n\ncount:%d tmp_count:%c\n",count,argv[2][0]);
+
+
 	for(int i=0;i<count;i++){
 		temp_index=(int)argv[2*i+3][0];
-		if(temp_index==ninf->if_number){
+		printf("index:%d name:%s\n",temp_index,argv[2*i+4]);
+		if(temp_index==ninf->if_number[0]){
 			printf("This process's vNIC name is %s\n",argv[2*i+4]);
 			break;
 		}
 		if(i==count-1) printf("This PID doesn't have vNIC\n");
 	}
-	
+
     return 0;
 }
 
 int get_vnic(char *pid)
 {
-	char tmp_count,tmp;
+	char tmp_count;
 	struct nic_info *ninf=&nic_info;
 
     make_iflist();
 
-	char *new_argv[2*(ninf->if_count)+4];
+	char *new_argv[2*(ninf->if_count)+5];
+	char tmp_index[ninf->if_count];
 	tmp_count=(char)ninf->if_count;
 
 	new_argv[0]=pid;
@@ -374,13 +384,16 @@ int get_vnic(char *pid)
 	new_argv[2]=ANOTHER_KEY;
 	new_argv[3]=&tmp_count;
 
+	printf("count:%d tmp_count:%c\n",ninf->if_count,tmp_count);
+
     for(int i=0;i<ninf->if_count;i++){
-		tmp=(char)ninf->if_index[i];
-		new_argv[2*i+4]=&tmp;
+		tmp_index[i]=(char)(ninf->if_index[i]);
+		new_argv[2*i+4]=&tmp_index[i];
 		new_argv[2*i+5]=ninf->if_name[i];
+		printf("index:%d name:%s tmp_index:%d\n",ninf->if_index[i],ninf->if_name[i],(int)new_argv[2*i+4][0]);
 	}
 	
-	do_netns(4,new_argv);
+	do_netns(2*(ninf->if_count)+4,new_argv);
 
     return 0;
 }

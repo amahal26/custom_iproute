@@ -74,7 +74,7 @@ int iplink_parse(int argc, char **argv, struct iplink_req *req, char **type);
 #define     LABEL_MAX_MASK          0xFFFFFU
 #endif
 
-int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *number);
+int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name, int *number);
 void make_iflist(void);
 void search_name(int number);
 
