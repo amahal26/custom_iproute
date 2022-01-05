@@ -41,77 +41,7 @@ enum {
 
 static struct link_filter filter;
 
-static void usage(void) __attribute__((noreturn));
-
-
-static void print_link_flags(FILE *fp, unsigned int flags, unsigned int mdown)
-{
-	open_json_array(PRINT_ANY, is_json_context() ? "flags" : "<");
-	if (flags & IFF_UP && !(flags & IFF_RUNNING))
-		print_string(PRINT_ANY, NULL,
-			     flags ? "%s," : "%s", "NO-CARRIER");
-	flags &= ~IFF_RUNNING;
-#define _PF(f) if (flags&IFF_##f) {					\
-		flags &= ~IFF_##f ;					\
-		print_string(PRINT_ANY, NULL, flags ? "%s," : "%s", #f); }
-	_PF(LOOPBACK);
-	_PF(BROADCAST);
-	_PF(POINTOPOINT);
-	_PF(MULTICAST);
-	_PF(NOARP);
-	_PF(ALLMULTI);
-	_PF(PROMISC);
-	_PF(MASTER);
-	_PF(SLAVE);
-	_PF(DEBUG);
-	_PF(DYNAMIC);
-	_PF(AUTOMEDIA);
-	_PF(PORTSEL);
-	_PF(NOTRAILERS);
-	_PF(UP);
-	_PF(LOWER_UP);
-	_PF(DORMANT);
-	_PF(ECHO);
-#undef _PF
-	if (flags)
-		print_hex(PRINT_ANY, NULL, "%x", flags);
-	if (mdown)
-		print_string(PRINT_ANY, NULL, ",%s", "M-DOWN");
-	close_json_array(PRINT_ANY, "> ");
-}
-
-static const char *oper_states[] = {
-	"UNKNOWN", "NOTPRESENT", "DOWN", "LOWERLAYERDOWN",
-	"TESTING", "DORMANT",	 "UP"
-};
-
-static void print_operstate(FILE *f, __u8 state)
-{
-	if (state >= ARRAY_SIZE(oper_states)) {
-		if (is_json_context())
-			print_uint(PRINT_JSON, "operstate_index", NULL, state);
-		else
-			print_0xhex(PRINT_FP, NULL, "state %#llx", state);
-	} else if (brief) {
-		print_color_string(PRINT_ANY,
-				   oper_state_color(state),
-				   "operstate",
-				   "%-14s ",
-				   oper_states[state]);
-	} else {
-		if (is_json_context())
-			print_string(PRINT_JSON,
-				     "operstate",
-				     NULL, oper_states[state]);
-		else {
-			fprintf(f, "state ");
-			color_fprintf(f, oper_state_color(state),
-				      "%s ", oper_states[state]);
-		}
-	}
-}
-
-int print_linkinfo(struct nlmsghdr *n, void *arg)
+int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name,int *number)
 {
 	FILE *fp = (FILE *)arg;
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
@@ -121,10 +51,12 @@ int print_linkinfo(struct nlmsghdr *n, void *arg)
 	len -= NLMSG_LENGTH(sizeof(*ifi));
 
 	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
-	printf("\nThis Interface's index is %d",ifi->ifi_index);
-	if(tb[IFLA_LINK]) printf("\nThis Interface's number is %d\n",rta_getattr_u32(tb[IFLA_LINK]));
+	*index=ifi->ifi_index;
+	if(strcmp("eth0",get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]))==0){
+		*number=rta_getattr_u32(tb[IFLA_LINK]);
+	}
+	strcpy(name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
 
-	print_string(PRINT_FP, NULL, "%s", "\n");
 	fflush(fp);
 	return 1;
 }
@@ -135,28 +67,6 @@ static unsigned int get_ifa_flags(struct ifaddrmsg *ifa,
 	return ifa_flags_attr ? rta_getattr_u32(ifa_flags_attr) :
 		ifa->ifa_flags;
 }
-
-/* Mapping from argument to address flag mask and attributes */
-static const struct ifa_flag_data_t {
-	const char *name;
-	unsigned long mask;
-	bool readonly;
-	bool v6only;
-} ifa_flag_data[] = {
-	{ .name = "secondary",		.mask = IFA_F_SECONDARY,	.readonly = true,	.v6only = false},
-	{ .name = "temporary",		.mask = IFA_F_SECONDARY,	.readonly = true,	.v6only = false},
-	{ .name = "nodad",		.mask = IFA_F_NODAD,	 	.readonly = false,	.v6only = true},
-	{ .name = "optimistic",		.mask = IFA_F_OPTIMISTIC,	.readonly = false,	.v6only = true},
-	{ .name = "dadfailed",		.mask = IFA_F_DADFAILED,	.readonly = true,	.v6only = true},
-	{ .name = "home",		.mask = IFA_F_HOMEADDRESS,	.readonly = false,	.v6only = true},
-	{ .name = "deprecated",		.mask = IFA_F_DEPRECATED,	.readonly = true,	.v6only = true},
-	{ .name = "tentative",		.mask = IFA_F_TENTATIVE,	.readonly = true,	.v6only = true},
-	{ .name = "permanent",		.mask = IFA_F_PERMANENT,	.readonly = true,	.v6only = true},
-	{ .name = "mngtmpaddr",		.mask = IFA_F_MANAGETEMPADDR,	.readonly = false,	.v6only = true},
-	{ .name = "noprefixroute",	.mask = IFA_F_NOPREFIXROUTE,	.readonly = false,	.v6only = false},
-	{ .name = "autojoin",		.mask = IFA_F_MCAUTOJOIN,	.readonly = false,	.v6only = false},
-	{ .name = "stable-privacy",	.mask = IFA_F_STABLE_PRIVACY, 	.readonly = true,	.v6only = true},
-};
 
 static int ifa_label_match_rta(int ifindex, const struct rtattr *rta)
 {
@@ -172,64 +82,6 @@ static int ifa_label_match_rta(int ifindex, const struct rtattr *rta)
 
 	return fnmatch(filter.label, label, 0);
 }
-
-int print_addrinfo(struct nlmsghdr *n, void *arg)
-{
-	struct ifaddrmsg *ifa = NLMSG_DATA(n);
-	int len = n->nlmsg_len;
-	struct rtattr *rta_tb[IFA_MAX+1];
-
-	if (n->nlmsg_type != RTM_NEWADDR && n->nlmsg_type != RTM_DELADDR)
-		return 0;
-	len -= NLMSG_LENGTH(sizeof(*ifa));
-	if (len < 0) {
-		fprintf(stderr, "BUG: wrong nlmsg len %d\n", len);
-		return -1;
-	}
-
-	if (filter.flushb && n->nlmsg_type != RTM_NEWADDR)
-		return 0;
-
-	parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa),
-		     n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
-
-	if (!rta_tb[IFA_LOCAL])
-		rta_tb[IFA_LOCAL] = rta_tb[IFA_ADDRESS];
-
-	if (rta_tb[IFA_LOCAL]) {
-		printf("\nThis Interface's address is %s\n",format_host_rta(ifa->ifa_family,rta_tb[IFA_LOCAL]));
-	}
-}
-
-static int print_selected_addrinfo(struct ifinfomsg *ifi,
-				   struct nlmsg_list *ainfo, FILE *fp)
-{
-	open_json_array(PRINT_JSON, "addr_info");
-	for ( ; ainfo ;  ainfo = ainfo->next) {
-		struct nlmsghdr *n = &ainfo->h;
-		struct ifaddrmsg *ifa = NLMSG_DATA(n);
-
-		if (n->nlmsg_type != RTM_NEWADDR)
-			continue;
-
-		if (n->nlmsg_len < NLMSG_LENGTH(sizeof(*ifa)))
-			return -1;
-
-		if (ifa->ifa_index != ifi->ifi_index ||
-		    (filter.family && filter.family != ifa->ifa_family))
-			continue;
-
-		if (filter.up && !(ifi->ifi_flags&IFF_UP))
-			continue;
-
-		open_json_object(NULL);
-		print_addrinfo(n, fp);
-		close_json_object();
-	}
-	close_json_array(PRINT_JSON, NULL);
-	return 0;
-}
-
 
 static int store_nlmsg(struct nlmsghdr *n, void *arg)
 {
@@ -421,11 +273,20 @@ static int ip_addr_list(struct nlmsg_chain *ainfo)
 	return 0;
 }
 
-static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
+void ipaddr_reset_filter(int oneline, int ifindex)
 {
+	memset(&filter, 0, sizeof(filter)); //&filterの指すアドレスからfilterのサイズ分unsiged char型に変換された0を書き込む
+	filter.oneline = oneline; //link_filter構造体のオブジェクトfilterのメンバであるonelineに引数で与えられたonelineを代入する
+	filter.ifindex = ifindex; //同様にメンバifindexに引数ifindexを代入する
+	filter.group = -1; //メンバgroupに-1を代入する
+}
+
+void make_iflist(void){
 	struct nlmsg_chain linfo = { NULL, NULL};
 	struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
 	struct nlmsg_list *l;
+	struct nic_info *ninf=&nic_info;
+	int no_link = 0;
 
 	ipaddr_reset_filter(oneline, 0);
 	filter.showqueue = 1;
@@ -446,6 +307,8 @@ static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
 	}
 
 	if (filter.family != AF_PACKET) {
+		if (filter.oneline)
+			no_link = 1;
 
 		if (ip_addr_list(ainfo) != 0)
 			goto out;
@@ -453,16 +316,22 @@ static int ipaddr_list_flush_or_save(int argc, char **argv, int action)
 		ipaddr_filter(&linfo, ainfo);
 	}
 
+	int i=0;
 	for (l = linfo.head; l; l = l->next) {
 		struct nlmsghdr *n = &l->h;
 		struct ifinfomsg *ifi = NLMSG_DATA(n);
 		int res = 0;
+		int *index=&ninf->if_index[i];
+		int *number=&ninf->if_number[i];
+		char *name=ninf->if_name[i];
 
 		open_json_object(NULL);
-		if (res >= 0 && filter.family != AF_PACKET)
-			print_selected_addrinfo(ifi, ainfo->head, stdout);
+		if (brief || !no_link)
+			set_iflist(n, stdout,index,name,number);
+			i++;
 		close_json_object();
 	}
+	ninf->if_count=i;
 	fflush(stdout);
 
 out:
@@ -472,16 +341,46 @@ out:
 	return 0;
 }
 
-void ipaddr_reset_filter(int oneline, int ifindex)
-{
-	memset(&filter, 0, sizeof(filter)); //&filterの指すアドレスからfilterのサイズ分unsiged char型に変換された0を書き込む
-	filter.oneline = oneline; //link_filter構造体のオブジェクトfilterのメンバであるonelineに引数で与えられたonelineを代入する
-	filter.ifindex = ifindex; //同様にメンバifindexに引数ifindexを代入する
-	filter.group = -1; //メンバgroupに-1を代入する
+int coll_name(char **argv){
+	int count=(int)argv[2][0];
+	int temp_index;
+	struct nic_info *ninf=&nic_info;
+
+    make_iflist();
+	for(int i=0;i<count;i++){
+		temp_index=(int)argv[2*i+3][0];
+		if(temp_index==ninf->if_number){
+			printf("This process's vNIC name is %s\n",argv[2*i+4]);
+			break;
+		}
+		if(i==count-1) printf("This PID doesn't have vNIC\n");
+	}
+	
+    return 0;
 }
 
-int do_ipaddr(int argc, char **argv)
+int get_vnic(char *pid)
 {
-	return ipaddr_list_flush_or_save(0, NULL, IPADD_LIST);
-	exit(-1);
+	char tmp_count,tmp;
+	struct nic_info *ninf=&nic_info;
+
+    make_iflist();
+
+	char *new_argv[2*(ninf->if_count)+4];
+	tmp_count=(char)ninf->if_count;
+
+	new_argv[0]=pid;
+	new_argv[1]=COMMAND_NAME;
+	new_argv[2]=ANOTHER_KEY;
+	new_argv[3]=&tmp_count;
+
+    for(int i=0;i<ninf->if_count;i++){
+		tmp=(char)ninf->if_index[i];
+		new_argv[2*i+4]=&tmp;
+		new_argv[2*i+5]=ninf->if_name[i];
+	}
+	
+	do_netns(4,new_argv);
+
+    return 0;
 }

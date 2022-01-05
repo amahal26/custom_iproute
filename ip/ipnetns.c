@@ -19,7 +19,9 @@
 #include <linux/net_namespace.h>
 
 #include "utils.h"
+#include "namespace.h"
 #include "ip_common.h"
+
 
 
 /* This socket is used to get nsid */
@@ -93,6 +95,70 @@ void netns_nsid_socket_init(void)
 
 }
 
+int netns_identify_pid(const char *pidstr, char *name, int len)
+{
+	char net_path[PATH_MAX];
+	int netns = -1, ret = -1;
+	struct stat netst;
+	DIR *dir;
+	struct dirent *entry;
+
+	name[0] = '\0';
+
+	snprintf(net_path, sizeof(net_path), "/proc/%s/ns/net", pidstr);
+	netns = open(net_path, O_RDONLY);
+	if (netns < 0) {
+		fprintf(stderr, "Cannot open network namespace: %s\n",
+			strerror(errno));
+		goto out;
+	}
+	if (fstat(netns, &netst) < 0) {
+		fprintf(stderr, "Stat of netns failed: %s\n",
+			strerror(errno));
+		goto out;
+	}
+	dir = opendir(NETNS_RUN_DIR);
+	if (!dir) {
+		/* Succeed treat a missing directory as an empty directory */
+		if (errno == ENOENT) {
+			ret = 0;
+			goto out;
+		}
+
+		fprintf(stderr, "Failed to open directory %s:%s\n",
+			NETNS_RUN_DIR, strerror(errno));
+		goto out;
+	}
+
+	while ((entry = readdir(dir))) {
+		char name_path[PATH_MAX];
+		struct stat st;
+
+		if (strcmp(entry->d_name, ".") == 0)
+			continue;
+		if (strcmp(entry->d_name, "..") == 0)
+			continue;
+
+		snprintf(name_path, sizeof(name_path), "%s/%s",	NETNS_RUN_DIR,
+			entry->d_name);
+
+		if (stat(name_path, &st) != 0)
+			continue;
+
+		if ((st.st_dev == netst.st_dev) &&
+		    (st.st_ino == netst.st_ino)) {
+			strlcpy(name, entry->d_name, len);
+		}
+	}
+	ret = 0;
+	closedir(dir);
+out:
+	if (netns >= 0)
+		close(netns);
+	return ret;
+
+}
+
 static int do_switch(void *arg)
 {
 	char *netns = arg;
@@ -105,52 +171,17 @@ static int do_switch(void *arg)
 	return netns_switch(netns);
 }
 
-static int on_netns_exec(char *nsname, void *arg)
-{
-	char **argv = arg;
-
-	printf("\nnetns: %s\n", nsname);
-	cmd_exec(argv[0], argv, true, do_switch, nsname);
-	return 0;
-}
-
 static int netns_exec(int argc, char **argv)
 {
-	/* Setup the proper environment for apps that are not netns
-	 * aware, and execute a program in that environment.
-	 */
-	if (argc < 1 && !do_all) {
+	if (argc < 1) {
 		fprintf(stderr, "No netns name specified\n");
 		return -1;
 	}
-	if ((argc < 2 && !do_all) || (argc < 1 && do_all)) {
-		fprintf(stderr, "No command specified\n");
-		return -1;
-	}
-
-	/* ip must return the status of the child,
-	 * but do_cmd() will add a minus to this,
-	 * so let's add another one here to cancel it.
-	 */
-	return netns_exec(argc-1, argv+1);
+	return -cmd_exec(argv[1], argv + 1, !!batch_mode, do_switch, argv[0]);
 }
-
-static int invalid_name(const char *name)
-{
-	return !*name || strlen(name) > NAME_MAX ||
-		strchr(name, '/') || !strcmp(name, ".") || !strcmp(name, "..");
-}
-
 int do_netns(int argc, char **argv)
 {
 	netns_nsid_socket_init();
 
-	if (!do_all && argc > 1 && invalid_name(argv[1])) {
-		fprintf(stderr, "Invalid netns name \"%s\"\n", argv[1]);
-		exit(-1);
-	}
-	
-	return netns_exec(argc-1, argv+1);
-
-	exit(-1);
+    return netns_exec(argc, argv);
 }

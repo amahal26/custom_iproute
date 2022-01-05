@@ -65,29 +65,6 @@ static int do_help(int argc, char **argv)
 	return 0;
 }
 
-static const struct cmd {
-	const char *cmd;
-	int (*func)(int argc, char **argv);
-} cmds[] = {
-	{ "address",	do_ipaddr },
-	{ "netns",	do_netns },
-	{ "help",	do_help },
-	{ 0 }
-};
-
-static int do_cmd(const char *argv0, int argc, char **argv, bool final)
-{
-	const struct cmd *c;
-
-	for (c = cmds; c->cmd; ++c) {
-		if (matches(argv0, c->cmd) == 0)
-			return -(c->func(argc-1, argv+1));
-	}
-
-	return EXIT_FAILURE;
-}
-
-
 int main(int argc, char **argv)
 {
 	char *basename;
@@ -109,9 +86,14 @@ int main(int argc, char **argv)
 		exit(1);
 
 	rtnl_set_strict_dump(&rth);
+	printf("do exec\n");
+	if(argc==2&&strcmp(argv[1],ANOTHER_KEY)!=0){
+		get_vnic(argv[1]);
+	}
+	else if(argc!=2&&strcmp(argv[1],ANOTHER_KEY)==0) coll_name(argv);
+	else printf("No command\n"); 
 
-	do_cmd(argv[1], argc-1, argv+1, true);
-
+	return 0;
 	rtnl_close(&rth);
 	usage();
 }
