@@ -41,7 +41,7 @@ enum {
 
 static struct link_filter filter;
 
-int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name,int *number)
+int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name, int *number, int *num)
 {
 	FILE *fp = (FILE *)arg;
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
@@ -56,6 +56,7 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name,int *numbe
 	if(rta_getattr_u32(tb[IFLA_LINK])){
 		printf("exist if number\n");
 		*number=rta_getattr_u32(tb[IFLA_LINK]);
+		*num+=1;
 		number+1;
 	}
 	strcpy(*name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
@@ -331,7 +332,7 @@ void make_iflist(void){
 
 		open_json_object(NULL);
 		if (brief || !no_link)
-			set_iflist(n, stdout,index,name,number);
+			set_iflist(n, stdout,index,name,number,&(ninf->if_count));
 			i++;
 		close_json_object();
 	}
@@ -358,9 +359,10 @@ int coll_name(char **argv){
 	for(int i=0;i<count;i++){
 		temp_index=(int)argv[2*i+3][0];
 		printf("index:%d name:%s\n",temp_index,argv[2*i+4]);
-		if(temp_index==ninf->if_number[0]){
-			printf("This process's vNIC name is %s\n",argv[2*i+4]);
-			break;
+		for(int j=0;j<ninf->num_count;j++){
+			if(temp_index==ninf->if_number[j]){
+				printf("This process's vNIC name is %s\n",argv[2*i+4]);
+			}
 		}
 		if(i==count-1) printf("This PID doesn't have vNIC\n");
 	}
