@@ -33,7 +33,6 @@ struct link_filter {
 
 struct nic_info{
 	int if_count;
-	int num_count;
 	int if_index[1024];
 	char if_name[1024][20];
 	int if_number[1024];
@@ -75,7 +74,7 @@ int iplink_parse(int argc, char **argv, struct iplink_req *req, char **type);
 #define     LABEL_MAX_MASK          0xFFFFFU
 #endif
 
-int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name, int *number, int *num);
+int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *number);
 void make_iflist(void);
 void search_name(int number);
 

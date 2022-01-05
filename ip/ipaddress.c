@@ -41,7 +41,7 @@ enum {
 
 static struct link_filter filter;
 
-int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name, int *number, int *num)
+int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *number)
 {
 	FILE *fp = (FILE *)arg;
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
@@ -52,15 +52,11 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char **name, int *numb
 
 	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
 	*index=ifi->ifi_index;
-	index+1;
 	if(rta_getattr_u32(tb[IFLA_LINK])){
 		printf("exist if number\n");
 		*number=rta_getattr_u32(tb[IFLA_LINK]);
-		*num+=1;
-		number+1;
 	}
-	strcpy(*name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
-	*name+1;
+	strcpy(name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
 
 	fflush(fp);
 	return 1;
@@ -292,9 +288,6 @@ void make_iflist(void){
 	struct nlmsg_list *l;
 	struct nic_info *ninf=&nic_info;
 	int no_link = 0;
-	int *index=ninf->if_index[0];
-	int *number=ninf->if_number[0];
-	char **name=&ninf->if_name[0];
 
 	ipaddr_reset_filter(oneline, 0);
 	filter.showqueue = 1;
@@ -327,12 +320,13 @@ void make_iflist(void){
 	int i=0;
 	for (l = linfo.head; l; l = l->next) {
 		struct nlmsghdr *n = &l->h;
-		struct ifinfomsg *ifi = NLMSG_DATA(n);
-		int res = 0;
+		int *index=&ninf->if_index[i];
+        int *number=&ninf->if_number[i];
+        char *name=ninf->if_name[i];
 
 		open_json_object(NULL);
 		if (brief || !no_link)
-			set_iflist(n, stdout,index,name,number,&(ninf->if_count));
+			set_iflist(n, stdout,index,name,number);
 			i++;
 		close_json_object();
 	}
