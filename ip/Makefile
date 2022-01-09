@@ -1,18 +1,25 @@
 # SPDX-License-Identifier: GPL-2.0
 IPOBJ=ip.o ipaddress.o ipnetns.o ipvrf.o
 
+RTMONOBJ=rtmon.o
+
 include ../config.mk
 
 ALLOBJ=$(IPOBJ)
-TARGETS=psvif
+SCRIPTS=ifcfg rtpr routel routef
+TARGETS=ip
 
 all: $(TARGETS)
 
-psvif: $(IPOBJ) $(LIBNETLINK)
-	$(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
+ip: $(IPOBJ) $(LIBNETLINK)
+        $(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
+
+rtmon: $(RTMONOBJ)
+        $(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 install: all
-	install -m 0755 $(TARGETS) $(DESTDIR)$(SBINDIR)
+        install -m 0755 $(TARGETS) $(DESTDIR)$(SBINDIR)
+        install -m 0755 $(SCRIPTS) $(DESTDIR)$(SBINDIR)
 
 clean:
 	rm -f $(ALLOBJ) $(TARGETS)
@@ -25,7 +32,7 @@ LDFLAGS += -Wl,-export-dynamic
 
 else
 
-psvif: static-syms.o
+ip: static-syms.o
 static-syms.o: static-syms.h
 static-syms.h: $(wildcard *.c)
 	files="$^" ; \

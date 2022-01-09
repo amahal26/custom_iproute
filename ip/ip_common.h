@@ -3,12 +3,22 @@
 #define _IP_COMMON_H_
 
 #include <stdbool.h>
-#include <sys/shm.h>
-#include <sys/ipc.h>
+#include <math.h>
+#include <time.h>
 
 #include "json_print.h"
+#include "c.h"
+#include "fileutils.h"
+#include "nls.h"
+//#include "signals.h"
+#include "xalloc.h"
+
+#include <proc/misc.h>
+#include <proc/pids.h>
 
 #define COMMAND_NAME "ip"
+
+struct timespec tsStart, tsEnd;
 
 struct link_filter {
 	int ifindex;

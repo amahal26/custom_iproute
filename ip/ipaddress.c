@@ -41,27 +41,6 @@ enum {
 
 static struct link_filter filter;
 
-int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *number)
-{
-	FILE *fp = (FILE *)arg;
-	struct ifinfomsg *ifi = NLMSG_DATA(n);
-	struct rtattr *tb[IFLA_MAX+1];
-	int len = n->nlmsg_len;
-
-	len -= NLMSG_LENGTH(sizeof(*ifi));
-
-	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
-	*index=ifi->ifi_index;
-	if(rta_getattr_u32(tb[IFLA_LINK])){
-		printf("exist if number\n");
-		*number=rta_getattr_u32(tb[IFLA_LINK]);
-	}
-	strcpy(name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
-
-	fflush(fp);
-	return 1;
-}
-
 static unsigned int get_ifa_flags(struct ifaddrmsg *ifa,
 				  struct rtattr *ifa_flags_attr)
 {
@@ -282,6 +261,27 @@ void ipaddr_reset_filter(int oneline, int ifindex)
 	filter.group = -1; //メンバgroupに-1を代入する
 }
 
+int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *number)
+{
+	FILE *fp = (FILE *)arg;
+	struct ifinfomsg *ifi = NLMSG_DATA(n);
+	struct rtattr *tb[IFLA_MAX+1];
+	int len = n->nlmsg_len;
+
+	len -= NLMSG_LENGTH(sizeof(*ifi));
+
+	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
+	*index=ifi->ifi_index;
+	if(tb[IFLA_LINK]){
+		printf("exist if number\n");
+		*number=rta_getattr_u32(tb[IFLA_LINK]);
+	}
+	strcpy(name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
+
+	fflush(fp);
+	return 1;
+}
+
 void make_iflist(void){
 	struct nlmsg_chain linfo = { NULL, NULL};
 	struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
@@ -343,6 +343,7 @@ out:
 int coll_name(char **argv){
 	int count=(int)argv[2][0];
 	int temp_index;
+	bool no_nic=true;
 	struct nic_info *ninf=&nic_info;
 
     make_iflist();
@@ -353,13 +354,14 @@ int coll_name(char **argv){
 	for(int i=0;i<count;i++){
 		temp_index=(int)argv[2*i+3][0];
 		printf("index:%d name:%s\n",temp_index,argv[2*i+4]);
-		for(int j=0;j<ninf->num_count;j++){
+		for(int j=0;j<ninf->if_count;j++){
 			if(temp_index==ninf->if_number[j]){
-				printf("This process's vNIC name is %s\n",argv[2*i+4]);
+				printf("%s\n",argv[2*i+4]);
+				no_nic=false;
 			}
 		}
-		if(i==count-1) printf("This PID doesn't have vNIC\n");
 	}
+	if(no_nic) printf("This PID doesn't have vNIC\n");
 
     return 0;
 }
