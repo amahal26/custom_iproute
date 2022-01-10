@@ -79,6 +79,7 @@ int iplink_parse(int argc, char **argv, struct iplink_req *req, char **type);
 int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *number);
 void make_iflist(void);
 void search_name(int number);
+void separate_enter(char *s);
 
 #define DEFAULT_KEY "back_to_default_nns"
 #define ANOTHER_KEY "go_to_another_nns"

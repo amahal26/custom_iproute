@@ -16,11 +16,13 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <err.h>
 #include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 #include <limits.h>
 #include <ctype.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <signal.h>
@@ -47,7 +49,7 @@ int force;
 int max_flush_loops = 10;
 int batch_mode;
 bool do_all;
-char pid_list[1024][10];
+char pid_list[1024][100];
 
 struct rtnl_handle rth = { .fd = -1 };
 
@@ -87,6 +89,46 @@ void separate_enter(char *s){
 	}
 }
 
+pid_t Fork(void){
+	pid_t	pid;
+
+	pid = fork ();
+	if (-1 == pid){
+		perror("can not fork");
+	}
+	return pid;
+}
+
+void multi_fork (int count){
+	int	i=0;
+	for (i=0; i<count; ++i){
+		pid_t pid=Fork();
+		if(pid==-1) break;
+		else if(pid==0){
+			get_vnic(pid_list[i]);
+			exit (EXIT_SUCCESS);
+		}
+	}
+}
+
+void multi_wait(){
+	for(;;){
+		pid_t pid;
+		int	status=0;
+
+		pid=wait(&status);
+
+		if (pid==-1){
+			if(ECHILD==errno) break;
+			else if(EINTR==errno) continue;
+			err(EXIT_FAILURE, "wait error");
+		}
+		(void) printf ("parent: child = %d, status=%d\n", pid, status);
+	}
+}
+
+
+
 int main(int argc, char **argv)
 {
 	char *basename;
@@ -109,7 +151,7 @@ int main(int argc, char **argv)
 
 	rtnl_set_strict_dump(&rth);
 	//printf("do exec\n");
-	if(argc==2&&strcmp(argv[1],ANOTHER_KEY)!=0){
+	if(argc==1){
 		FILE *fp;
 		char *cmdline="pgrep envoy";
 		if((fp=popen(cmdline,"r"))==NULL){
@@ -119,21 +161,17 @@ int main(int argc, char **argv)
 		int i=0;
 		while(!feof(fp)){
 			fgets(pid_list[i], sizeof(pid_list[i]), fp);
+			separate_enter(pid_list[i]);
+			separate_space(pid_list[i]);
 			i++;
 		}
 		(void) pclose(fp);
-		for(int j=0; j<i-1; j++) printf("%s\n",pid_list[j]);
+		i--;
 
-		pid_t pid;
-		pid=fork();
-		if(pid==-1){
-			err (EXIT_FAILURE, "can not fork");
-			}
-		else if(pid==0){
-			get_vnic(argv[1]);
-		}
+		multi_fork(i);
+		multi_wait();
+
 		exit (EXIT_SUCCESS);
-
 	}
 	else if(argc!=2&&strcmp(argv[1],ANOTHER_KEY)==0) coll_name(argv);
 	else printf("No command\n"); 
