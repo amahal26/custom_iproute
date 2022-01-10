@@ -81,9 +81,6 @@ static int do_help(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-	FILE *fp;
-	char *cmdline="pgrep envoy";
-
 	char *basename;
 	int color = 0;
 
@@ -105,19 +102,29 @@ int main(int argc, char **argv)
 	rtnl_set_strict_dump(&rth);
 	//printf("do exec\n");
 	if(argc==2&&strcmp(argv[1],ANOTHER_KEY)!=0){
-		if((fp=popen(cmdline,"r"))==NULL){
-			perror("Searching pid command fail");
-			exit(EXIT_FAILURE);
+		pid_t pid;
+		pid=fork();
+		if(pid==-1){
+			err (EXIT_FAILURE, "can not fork");
+			}
+			else if(pid==0){
+				FILE *fp;
+			char *cmdline="pgrep envoy";
+			if((fp=popen(cmdline,"r"))==NULL){
+				perror("Searching pid command fail");
+				exit(EXIT_FAILURE);
+			}
+			int i=0;
+			while(!feof(fp)){
+				fscanf(fp, "%s", pid_list[i]);
+				i++;
+			}
+			(void) pclose(fp);
+			for(int j=0; j<i-1; j++) printf("%s\n",pid_list[j]);
 		}
-		int i=0;
-		while(!feof(fp)){
-			fscanf(fp, "%s", pid_list[i]);
-			i++;
+		else{
+			get_vnic(argv[1]);
 		}
-		(void) pclose(fp);
-		for(int j=0; j<i-1; j++) printf("%s\n",pid_list[j]);
-
-		get_vnic(argv[1]);
 
 	}
 	else if(argc!=2&&strcmp(argv[1],ANOTHER_KEY)==0) coll_name(argv);
