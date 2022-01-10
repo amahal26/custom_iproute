@@ -52,7 +52,7 @@ void netns_nsid_socket_init(void);//
 int coll_name(char **argv);//
 int do_netns(int argc, char **argv);//
 int back_netns(int argc, char **argv);//
-int get_vnic(char *pid);
+int get_vnic(char *pid, char *ipaddr);
 
 void vrf_reset(void);
 
@@ -78,6 +78,7 @@ int iplink_parse(int argc, char **argv, struct iplink_req *req, char **type);
 #endif
 
 int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *number);
+int set_iplist(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp, char *addr);
 void make_iflist(void);
 void search_name(int number);
 void separate_enter(char *s);

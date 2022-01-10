@@ -282,7 +282,7 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *numbe
 	return 1;
 }
 
-static int set_iplist(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp, char *addr)
+int set_iplist(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp, char *addr)
 {
 	for ( ; ainfo ;  ainfo = ainfo->next) { //第2引数で与えられたリストを走査する
 		struct nlmsghdr *n = &ainfo->h;
@@ -312,7 +312,7 @@ static int set_iplist(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp,
 
 		parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa),
 		    n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
-			if (rta_tb[IFA_LOCAL]) printf("%s\n",format_host_rta(ifa->ifa_family, rta_tb[IFA_LOCAL]));
+			if (rta_tb[IFA_LOCAL]) *addr=format_host_rta(ifa->ifa_family, rta_tb[IFA_LOCAL]);
 		close_json_object();
 	}
 	close_json_array(PRINT_JSON, NULL);
@@ -382,7 +382,8 @@ out:
 }
 
 int coll_name(char **argv){
-	int count=(int)argv[2][0];
+	char *ipaddr=argv[2];
+	int count=(int)argv[3][0];
 	int temp_index;
 	bool no_nic=true;
 	struct nic_info *ninf=&nic_info;
@@ -396,7 +397,7 @@ int coll_name(char **argv){
 		temp_index=(int)argv[2*i+3][0];
 		//printf("index:%d name:%s\n",temp_index,argv[2*i+4]);
 		for(int j=0;j<ninf->if_count;j++){
-			if(temp_index==ninf->if_number[j]){
+			if(temp_index==ninf->if_number[j]&&strcmp(ipaddr,ninf->ip_addr)==0){
 				printf("%s\n",argv[2*i+4]);
 				no_nic=false;
 			}
@@ -407,32 +408,33 @@ int coll_name(char **argv){
     return 0;
 }
 
-int get_vnic(char *pid)
+int get_vnic(char *pid, char *ipaddr)
 {
 	char tmp_count;
 	struct nic_info *ninf=&nic_info;
 
     make_iflist();
 
-	char *new_argv[2*(ninf->if_count)+5];
+	char *new_argv[2*(ninf->if_count)+6];
 	char tmp_index[ninf->if_count];
 	tmp_count=(char)ninf->if_count;
 
 	new_argv[0]=pid;
 	new_argv[1]=COMMAND_NAME;
 	new_argv[2]=ANOTHER_KEY;
-	new_argv[3]=&tmp_count;
+	new_argv[3]=ipaddr;
+	new_argv[4]=&tmp_count;
 
 	//printf("count:%d tmp_count:%c\n",ninf->if_count,tmp_count);
 
     for(int i=0;i<ninf->if_count;i++){
 		tmp_index[i]=(char)(ninf->if_index[i]);
-		new_argv[2*i+4]=&tmp_index[i];
-		new_argv[2*i+5]=ninf->if_name[i];
+		new_argv[2*i+5]=&tmp_index[i];
+		new_argv[2*i+6]=ninf->if_name[i];
 		//printf("index:%d name:%s tmp_index:%d\n",ninf->if_index[i],ninf->if_name[i],(int)new_argv[2*i+4][0]);
 	}
 	
-	do_netns(2*(ninf->if_count)+4,new_argv);
+	do_netns(2*(ninf->if_count)+5,new_argv);
 
     return 0;
 }

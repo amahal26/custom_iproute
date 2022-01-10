@@ -108,13 +108,13 @@ pid_t Fork(void){
 	return pid;
 }
 
-void seach_vnic(int count){
+void seach_vnic(int count, char *ipaddr){
 	int	i=0;
 	for (i=0; i<count; ++i){
 		pid_t pid=Fork();
 		if(pid==-1) break;
 		else if(pid==0){
-			get_vnic(pid_list[i]);
+			get_vnic(pid_list[i], ipaddr);
 			exit (EXIT_SUCCESS);
 		}
 		else{
@@ -145,7 +145,7 @@ int main(int argc, char **argv)
 		exit(1);
 
 	rtnl_set_strict_dump(&rth);
-	//printf("do exec\n");
+
 	if(argc==1){
 		FILE *fp;
 		char *cmdline="pgrep envoy";
@@ -163,7 +163,7 @@ int main(int argc, char **argv)
 		(void) pclose(fp);
 		i--;
 
-		seach_vnic(i);
+		seach_vnic(i, argv[1]);
 
 		exit (EXIT_SUCCESS);
 	}
