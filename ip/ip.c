@@ -79,23 +79,10 @@ static int do_help(int argc, char **argv)
 	return 0;
 }
 
-
 int main(int argc, char **argv)
 {
 	FILE *fp;
-	char *cmdline="pidof envoy";
-	if((fp=popen(cmdline,"r"))==NULL){
-		perror("Searching pid command fail");
-		exit(EXIT_FAILURE);
-	}
-	int i=0;
-	while(feof(fp)){
-		fgets(pid_list[i], sizeof(pid_list[i]), fp);
-		printf("%s\n",pid_list[i]);
-		i++;
-	}
-	(void) pclose(fp);
-	
+	char *cmdline="pgrep envoy";
 
 	char *basename;
 	int color = 0;
@@ -116,9 +103,22 @@ int main(int argc, char **argv)
 		exit(1);
 
 	rtnl_set_strict_dump(&rth);
-	printf("do exec\n");
+	//printf("do exec\n");
 	if(argc==2&&strcmp(argv[1],ANOTHER_KEY)!=0){
+		if((fp=popen(cmdline,"r"))==NULL){
+			perror("Searching pid command fail");
+			exit(EXIT_FAILURE);
+		}
+		int i=0;
+		while(!feof(fp)){
+			fscanf(fp, "%s", pid_list[i]);
+			i++;
+		}
+		(void) pclose(fp);
+		for(int j=0; j<i-1; j++) printf("%s\n",pid_list[j]);
+
 		get_vnic(argv[1]);
+
 	}
 	else if(argc!=2&&strcmp(argv[1],ANOTHER_KEY)==0) coll_name(argv);
 	else printf("No command\n"); 

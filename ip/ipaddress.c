@@ -273,7 +273,7 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *numbe
 	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
 	*index=ifi->ifi_index;
 	if(tb[IFLA_LINK]){
-		printf("exist if number\n");
+		//printf("exist if number\n");
 		*number=rta_getattr_u32(tb[IFLA_LINK]);
 	}
 	strcpy(name,get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
@@ -348,12 +348,12 @@ int coll_name(char **argv){
 
     make_iflist();
 
-	printf("\n\ncount:%d tmp_count:%c\n",count,argv[2][0]);
+	//printf("\n\ncount:%d tmp_count:%c\n",count,argv[2][0]);
 
 
 	for(int i=0;i<count;i++){
 		temp_index=(int)argv[2*i+3][0];
-		printf("index:%d name:%s\n",temp_index,argv[2*i+4]);
+		//printf("index:%d name:%s\n",temp_index,argv[2*i+4]);
 		for(int j=0;j<ninf->if_count;j++){
 			if(temp_index==ninf->if_number[j]){
 				printf("%s\n",argv[2*i+4]);
@@ -382,13 +382,13 @@ int get_vnic(char *pid)
 	new_argv[2]=ANOTHER_KEY;
 	new_argv[3]=&tmp_count;
 
-	printf("count:%d tmp_count:%c\n",ninf->if_count,tmp_count);
+	//printf("count:%d tmp_count:%c\n",ninf->if_count,tmp_count);
 
     for(int i=0;i<ninf->if_count;i++){
 		tmp_index[i]=(char)(ninf->if_index[i]);
 		new_argv[2*i+4]=&tmp_index[i];
 		new_argv[2*i+5]=ninf->if_name[i];
-		printf("index:%d name:%s tmp_index:%d\n",ninf->if_index[i],ninf->if_name[i],(int)new_argv[2*i+4][0]);
+		//printf("index:%d name:%s tmp_index:%d\n",ninf->if_index[i],ninf->if_name[i],(int)new_argv[2*i+4][0]);
 	}
 	
 	do_netns(2*(ninf->if_count)+4,new_argv);

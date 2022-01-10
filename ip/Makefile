@@ -5,21 +5,21 @@ RTMONOBJ=rtmon.o
 
 include ../config.mk
 
-ALLOBJ=$(IPOBJ)
+ALLOBJ=$(IPOBJ) $(RTMONOBJ)
 SCRIPTS=ifcfg rtpr routel routef
 TARGETS=ip
 
 all: $(TARGETS)
 
 ip: $(IPOBJ) $(LIBNETLINK)
-        $(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
+	$(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 rtmon: $(RTMONOBJ)
-        $(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
+	$(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 install: all
-		install -m 0755 $(TARGETS) $(DESTDIR)$(SBINDIR)
-		install -m 0755 $(SCRIPTS) $(DESTDIR)$(SBINDIR)
+	install -m 0755 $(TARGETS) $(DESTDIR)$(SBINDIR)
+	install -m 0755 $(SCRIPTS) $(DESTDIR)$(SBINDIR)
 
 clean:
 	rm -f $(ALLOBJ) $(TARGETS)
