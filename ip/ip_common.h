@@ -7,14 +7,6 @@
 #include <time.h>
 
 #include "json_print.h"
-#include "c.h"
-#include "fileutils.h"
-#include "nls.h"
-//#include "signals.h"
-#include "xalloc.h"
-
-#include <proc/misc.h>
-#include <proc/pids.h>
 
 #define COMMAND_NAME "ip"
 
