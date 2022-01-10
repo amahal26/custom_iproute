@@ -18,8 +18,8 @@ rtmon: $(RTMONOBJ)
         $(QUIET_LINK)$(CC) $^ $(LDFLAGS) $(LDLIBS) -o $@
 
 install: all
-        install -m 0755 $(TARGETS) $(DESTDIR)$(SBINDIR)
-        install -m 0755 $(SCRIPTS) $(DESTDIR)$(SBINDIR)
+		install -m 0755 $(TARGETS) $(DESTDIR)$(SBINDIR)
+		install -m 0755 $(SCRIPTS) $(DESTDIR)$(SBINDIR)
 
 clean:
 	rm -f $(ALLOBJ) $(TARGETS)
