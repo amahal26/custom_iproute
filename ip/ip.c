@@ -89,6 +89,15 @@ void separate_enter(char *s){
 	}
 }
 
+void separate_space(char *s){
+	char *p=s;
+	p=strstr(s," ");
+	if(p!=NULL){
+		strcpy(p,p+strlen(" "));
+		separate_space(p+1);
+	}
+}
+
 pid_t Fork(void){
 	pid_t	pid;
 
@@ -99,7 +108,7 @@ pid_t Fork(void){
 	return pid;
 }
 
-void multi_fork (int count){
+void seach_vnic(int count){
 	int	i=0;
 	for (i=0; i<count; ++i){
 		pid_t pid=Fork();
@@ -108,26 +117,12 @@ void multi_fork (int count){
 			get_vnic(pid_list[i]);
 			exit (EXIT_SUCCESS);
 		}
-	}
-}
-
-void multi_wait(){
-	for(;;){
-		pid_t pid;
-		int	status=0;
-
-		pid=wait(&status);
-
-		if (pid==-1){
-			if(ECHILD==errno) break;
-			else if(EINTR==errno) continue;
-			err(EXIT_FAILURE, "wait error");
+		else{
+			int	status=0;
+			pid=wait(&status);
 		}
-		(void) printf ("parent: child = %d, status=%d\n", pid, status);
 	}
 }
-
-
 
 int main(int argc, char **argv)
 {
@@ -168,8 +163,7 @@ int main(int argc, char **argv)
 		(void) pclose(fp);
 		i--;
 
-		multi_fork(i);
-		multi_wait();
+		seach_vnic(i);
 
 		exit (EXIT_SUCCESS);
 	}

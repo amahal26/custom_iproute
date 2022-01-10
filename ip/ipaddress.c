@@ -282,6 +282,44 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *numbe
 	return 1;
 }
 
+static int set_iplist(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp, char *addr)
+{
+	for ( ; ainfo ;  ainfo = ainfo->next) { //第2引数で与えられたリストを走査する
+		struct nlmsghdr *n = &ainfo->h;
+		struct ifaddrmsg *ifa = NLMSG_DATA(n);
+		int len = n->nlmsg_len;
+		unsigned int ifa_flags;
+		struct rtattr *rta_tb[IFA_MAX+1];
+
+
+		if (n->nlmsg_type != RTM_NEWADDR)
+			continue;
+
+		if (n->nlmsg_len < NLMSG_LENGTH(sizeof(*ifa)))
+			return -1;
+
+		if (ifa->ifa_index != ifi->ifi_index ||
+		    (filter.family && filter.family != ifa->ifa_family))
+			continue;
+
+		if (filter.up && !(ifi->ifi_flags&IFF_UP))
+			continue;
+
+		open_json_object(NULL);
+
+		if (!rta_tb[IFA_LOCAL])
+		rta_tb[IFA_LOCAL] = rta_tb[IFA_ADDRESS];
+
+		parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa),
+		    n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
+			if (rta_tb[IFA_LOCAL]) printf("%s\n",format_host_rta(ifa->ifa_family, rta_tb[IFA_LOCAL]));
+		close_json_object();
+	}
+	close_json_array(PRINT_JSON, NULL);
+
+	return 0;
+}
+
 void make_iflist(void){
 	struct nlmsg_chain linfo = { NULL, NULL};
 	struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
@@ -320,13 +358,16 @@ void make_iflist(void){
 	int i=0;
 	for (l = linfo.head; l; l = l->next) {
 		struct nlmsghdr *n = &l->h;
+		struct ifinfomsg *ifi = NLMSG_DATA(n);
 		int *index=&ninf->if_index[i];
         int *number=&ninf->if_number[i];
         char *name=ninf->if_name[i];
+		char *addr=ninf->ip_addr[i];
 
 		open_json_object(NULL);
 		if (brief || !no_link)
 			set_iflist(n, stdout,index,name,number);
+			set_iplist(ifi, ainfo->head, stdout, addr);
 			i++;
 		close_json_object();
 	}
