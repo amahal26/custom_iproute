@@ -38,6 +38,7 @@ struct nic_info{
 	int if_index[1024];
 	char if_name[1024][20];
 	int if_number[1024];
+	char ip_addr[1024][20]
 };
 
 struct nic_info nic_info;
@@ -80,6 +81,7 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name, int *numbe
 void make_iflist(void);
 void search_name(int number);
 void separate_enter(char *s);
+void separate_space(char *s);
 
 #define DEFAULT_KEY "back_to_default_nns"
 #define ANOTHER_KEY "go_to_another_nns"
