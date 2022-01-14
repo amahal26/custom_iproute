@@ -146,7 +146,7 @@ int main(int argc, char **argv)
 
 	rtnl_set_strict_dump(&rth);
 
-	if(argc==1){
+	if(argc==2){
 		FILE *fp;
 		char *cmdline="pgrep envoy";
 		if((fp=popen(cmdline,"r"))==NULL){
@@ -167,7 +167,9 @@ int main(int argc, char **argv)
 
 		exit (EXIT_SUCCESS);
 	}
-	else if(argc!=2&&strcmp(argv[1],ANOTHER_KEY)==0) coll_name(argv);
+	else if(strcmp(argv[1],ANOTHER_KEY)==0){
+		if(coll_name(argv)==-1) return 0;
+	} 
 	else printf("No command\n"); 
 
 	return 0;

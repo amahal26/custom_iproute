@@ -38,7 +38,7 @@ struct nic_info{
 	int if_index[1024];
 	char if_name[1024][20];
 	int if_number[1024];
-	char ip_addr[1024][20]
+	char ip_addr[1024][20];
 };
 
 struct nic_info nic_info;
