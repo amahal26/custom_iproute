@@ -108,70 +108,45 @@ pid_t Fork(void){
 	return pid;
 }
 
-void seach_vnic(int count, char *ipaddr){
-	int	i=0;
-	int discover_nic;
-	char index;
-	if(pipe(pipe_fd)<0){
-		perror("making pipe false\n");
-		exit(1);
-	}
-	for (i=0; i<count; ++i){
-		pid_t pid=Fork();
-		if(pid==-1) break;
-		else if(pid==0){
-			char *new_argv[]={pid_list[i], COMMAND_NAME, ipaddr, ANOTHER_KEY};
-			close(pipe_fd[0]);
-
-			do_netns(5,new_argv);
-			exit (EXIT_SUCCESS);
-		}
-		else{
-			int	status=0;
-			int pipe_count;
-
-			close(pipe_fd[1]);
-
-			while((pipe_count=read(pipe_fd[0], &index, 1))>0){
-				strcat(if_index,index);
-				discover_nic++;
-			}
-
-			pid=wait(&status);
-
-			if(discover_nic==0) continue;
-			else {
-				coll_index();
-				return;
-			}		
-		}
-	}
-	printf("seaching nic false\n");
-	return;
-}
-
 int make_pidlist(void){
 	FILE *fp;
-		char *cmdline=strcat("pgrep ",PROXY_NAME);
-		if((fp=popen(cmdline,"r"))==NULL){
-			perror("Searching pid command fail");
-			exit(EXIT_FAILURE);
-		}
-		int i=0;
-		while(!feof(fp)){
-			fgets(pid_list[i], sizeof(pid_list[i]), fp);
-			separate_enter(pid_list[i]);
-			separate_space(pid_list[i]);
-			i++;
-		}
-		(void) pclose(fp);
-		i--;
+	char *cmdline="pgrep envoy";
+	if((fp=popen(cmdline,"r"))==NULL){
+		perror("Searching pid command fail");
+		exit(EXIT_FAILURE);
+	}
+	int i=0;
+	while(!feof(fp)){
+		fgets(pid_list[i], sizeof(pid_list[i]), fp);
+		separate_enter(pid_list[i]);
+		separate_space(pid_list[i]);
+		i++;
+	}
+	(void) pclose(fp);
+	i;
 
-		return i;
+	return i;
+}
+
+void seach_vnic(int count, char *ipaddr){
+    int i=0;
+    for (i=0; i<count; ++i){
+        pid_t pid=Fork();
+        if(pid==-1) break;
+        else if(pid==0){
+            get_vnic(pid_list[i], ipaddr);
+	        exit (EXIT_SUCCESS);
+        }
+        else{
+            int status=0;
+            pid=wait(&status);
+            }
+    }
 }
 
 int main(int argc, char **argv)
 {
+	timespec_get(&tsStart, TIME_UTC);
 	char *basename;
 	int color = 0;
 
@@ -193,35 +168,12 @@ int main(int argc, char **argv)
 	rtnl_set_strict_dump(&rth);
 
 	if(argc==2){
-<<<<<<< HEAD
-		FILE *fp;
-		char *cmdline="pgrep envoy";
-		if((fp=popen(cmdline,"r"))==NULL){
-			perror("Searching pid command fail");
-			exit(EXIT_FAILURE);
-		}
-		int i=0;
-		while(!feof(fp)){
-			fgets(pid_list[i], sizeof(pid_list[i]), fp);
-			separate_enter(pid_list[i]);
-			separate_space(pid_list[i]);
-			i++;
-		}
-		(void) pclose(fp);
-		i--;
-
-=======
-		int i=make_pidlist();
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
-		seach_vnic(i, argv[1]);
+		int pidnum=make_pidlist();
+		seach_vnic(pidnum, argv[1]);
 	}
-<<<<<<< HEAD
 	else if(strcmp(argv[1],ANOTHER_KEY)==0){
 		if(coll_name(argv)==-1) return 0;
 	} 
-=======
-	else if(argc!=2&&strcmp(argv[2],ANOTHER_KEY)==0) coll_ip(argv[1]);
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
 	else printf("No command\n"); 
 
 	return 0;

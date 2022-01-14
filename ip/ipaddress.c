@@ -261,7 +261,6 @@ void ipaddr_reset_filter(int oneline, int ifindex)
 	filter.group = -1; //メンバgroupに-1を代入する
 }
 
-<<<<<<< HEAD
 int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name)
 {
 	FILE *fp = (FILE *)arg;
@@ -281,9 +280,6 @@ int set_iflist(struct nlmsghdr *n, void *arg, int *index, char *name)
 
 int set_iplist(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp, char *addr)
 {
-=======
-int search_ip(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp,char *ipaddr){
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
 	for ( ; ainfo ;  ainfo = ainfo->next) { //第2引数で与えられたリストを走査する
 		struct nlmsghdr *n = &ainfo->h;
 		struct ifaddrmsg *ifa = NLMSG_DATA(n);
@@ -310,108 +306,12 @@ int search_ip(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp,char *ip
 
 		parse_rtattr(rta_tb, IFA_MAX, IFA_RTA(ifa),
 		    n->nlmsg_len - NLMSG_LENGTH(sizeof(*ifa)));
-<<<<<<< HEAD
 			if (rta_tb[IFA_LOCAL]) strcpy(addr,format_host_rta(ifa->ifa_family, rta_tb[IFA_LOCAL]));
 
-=======
-			if (rta_tb[IFA_LOCAL]) {
-				if(strcmp(ipaddr,format_host_rta(ifa->ifa_family, rta_tb[IFA_LOCAL]))==0){
-					return 1;
-				}
-			}
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
 		close_json_object();
 	}
 	close_json_array(PRINT_JSON, NULL);
 	return 0;
-}
-
-void search_index(struct nlmsghdr *n, void *arg)
-{
-	FILE *fp = (FILE *)arg;
-	struct ifinfomsg *ifi = NLMSG_DATA(n);
-	struct rtattr *tb[IFLA_MAX+1];
-	int len = n->nlmsg_len;
-	char *index;
-
-	len -= NLMSG_LENGTH(sizeof(*ifi));
-
-	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
-	if(tb[IFLA_LINK]){
-		strcpy(index,(char*)rta_getattr_u32(tb[IFLA_LINK]));
-		while(*index){
-			if (write(pipe_fd[1], index, 1) < 0) {
-				perror("write error");
-				exit(1);
-			}
-			index++;
-		}
-	}
-
-	fflush(fp);
-}
-
-void coll_ip(char *ipaddr){
-	struct nlmsg_chain linfo = { NULL, NULL};
-	struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
-	struct nlmsg_list *l;
-	struct nic_info *ninf=&nic_info;
-	int no_link = 0;
-
-	ipaddr_reset_filter(oneline, 0);
-	filter.showqueue = 1;
-	filter.family = preferred_family;
-
-	/*
-	 * Initialize a json_writer and open an array object
-	 * if -json was specified.
-	 */
-	new_json_obj(json);
-
-	if (filter.ifindex) {
-		if (ipaddr_link_get(filter.ifindex, &linfo) != 0)
-			goto out;
-	} else {
-		if (ip_link_list(iplink_filter_req, &linfo) != 0)
-			goto out;
-	}
-
-	if (filter.family != AF_PACKET) {
-		if (filter.oneline)
-			no_link = 1;
-
-		if (ip_addr_list(ainfo) != 0)
-			goto out;
-
-		ipaddr_filter(&linfo, ainfo);
-	}
-
-	int i=0;
-	for (l = linfo.head; l; l = l->next) {
-		struct nlmsghdr *n = &l->h;
-		struct ifinfomsg *ifi = NLMSG_DATA(n);
-<<<<<<< HEAD
-		int *index=&ninf->if_index[i];
-        char *name=ninf->if_name[i];
-
-		open_json_object(NULL);
-		if (brief || !no_link)
-			set_iflist(n, stdout,index,name);
-			i++;
-=======
-
-		open_json_object(NULL);
-		if (brief || !no_link)
-			if(search_ip(ifi, ainfo->head, stdout, ipaddr)==1) search_index(n, stdout);
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
-		close_json_object();
-	}
-
-out:
-	free_nlmsg_chain(ainfo);
-	free_nlmsg_chain(&linfo);
-	delete_json_obj();
-<<<<<<< HEAD
 }
 
 int search_ip(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp,char *ipaddr){
@@ -453,17 +353,11 @@ int search_ip(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp,char *ip
 }
 
 int search_index(struct nlmsghdr *n, void *arg)
-=======
-}
-
-void search_name(struct nlmsghdr *n, void *arg, int index)
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
 {
 	FILE *fp = (FILE *)arg;
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
 	struct rtattr *tb[IFLA_MAX+1];
 	int len = n->nlmsg_len;
-<<<<<<< HEAD
 	int index;
 
 	len -= NLMSG_LENGTH(sizeof(*ifi));
@@ -541,88 +435,87 @@ int coll_name(char **argv){
 
 	for(int i=0;i<count;i++){
 		temp_index=(int)argv[2*i+4][0];
-		for(int j=0;j<ninf->if_count;j++){
-			if(temp_index==number){
-				printf("%s\n",argv[2*i+5]);
-			}
+		if(temp_index==number){
+			printf("%s\n",argv[2*i+5]);
 		}
 	}
     return 0;
-=======
-
-	len -= NLMSG_LENGTH(sizeof(*ifi));
-
-	parse_rtattr_flags(tb, IFLA_MAX, IFLA_RTA(ifi), len, NLA_F_NESTED);
-	if(ifi->ifi_index==index) printf("%s\n",get_ifname_rta(ifi->ifi_index, tb[IFLA_IFNAME]));
-
-	fflush(fp);
-	return 1;
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
 }
 
-void coll_index(){
-	int index=(int)if_index;
+void make_iflist(void){
 	struct nlmsg_chain linfo = { NULL, NULL};
-	struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
-	struct nlmsg_list *l;
-	struct nic_info *ninf=&nic_info;
-	int no_link = 0;
-
+    struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
+    struct nlmsg_list *l;
+    struct nic_info *ninf=&nic_info;
+    int no_link = 0;
+    
 	ipaddr_reset_filter(oneline, 0);
-	filter.showqueue = 1;
-	filter.family = preferred_family;
-
-	/*
-	 * Initialize a json_writer and open an array object
-	 * if -json was specified.
-	 */
+    filter.showqueue = 1;
+    filter.family = preferred_family;
+	
 	new_json_obj(json);
 
-	if (filter.ifindex) {
-		if (ipaddr_link_get(filter.ifindex, &linfo) != 0)
-			goto out;
-	} else {
-		if (ip_link_list(iplink_filter_req, &linfo) != 0)
-			goto out;
-	}
+    if (filter.ifindex) {
+        if (ipaddr_link_get(filter.ifindex, &linfo) != 0)
+            goto out;
+    } else {
+        if (ip_link_list(iplink_filter_req, &linfo) != 0)
+            goto out;
+    }
 
-	if (filter.family != AF_PACKET) {
-		if (filter.oneline)
-			no_link = 1;
+    if (filter.family != AF_PACKET) {
+        if (filter.oneline)
+            no_link = 1;
 
-<<<<<<< HEAD
-	char *new_argv[2*(ninf->if_count)+8];
-	char tmp_index[ninf->if_count];
-	tmp_count=(char)ninf->if_count;
-=======
-		if (ip_addr_list(ainfo) != 0)
-			goto out;
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
+        if (ip_addr_list(ainfo) != 0)
+            goto out;
 
-		ipaddr_filter(&linfo, ainfo);
-	}
+        ipaddr_filter(&linfo, ainfo);
+    }
 
-<<<<<<< HEAD
+    int i=0;
+    for (l = linfo.head; l; l = l->next) {
+        struct nlmsghdr *n = &l->h;
+        struct ifinfomsg *ifi = NLMSG_DATA(n);
+        int *index=&ninf->if_index[i];
+        char *name=ninf->if_name[i];
 
-    for(int i=0;i<ninf->if_count;i++){
-		tmp_index[i]=(char)(ninf->if_index[i]);
-		new_argv[2*i+5]=&tmp_index[i];
-		new_argv[2*i+6]=ninf->if_name[i];
-=======
-	int i=0;
-	for (l = linfo.head; l; l = l->next) {
-		struct nlmsghdr *n = &l->h;
-		struct ifinfomsg *ifi = NLMSG_DATA(n);
-
-		open_json_object(NULL);
-		if (brief || !no_link)
-			search_name(n, stdout, index);
-		close_json_object();
->>>>>>> 93f2714e392556732b6b0898c4beeb72d49443d0
-	}
+        open_json_object(NULL);
+        if (brief || !no_link) set_iflist(n, stdout,index,name);
+        i++;
+        close_json_object();
+    }
+    ninf->if_count=i;
 
 out:
-	free_nlmsg_chain(ainfo);
-	free_nlmsg_chain(&linfo);
-	delete_json_obj();
+    free_nlmsg_chain(ainfo);
+    free_nlmsg_chain(&linfo);
+    delete_json_obj();
+    return 0;
+}
+
+int get_vnic(char *pid, char *ipaddr)
+{
+    char tmp_count;
+    struct nic_info *ninf=&nic_info;
+
+    make_iflist();
+
+	char *new_argv[2*(ninf->if_count)+8];
+    char tmp_index[ninf->if_count];
+    tmp_count=(char)ninf->if_count;
+    new_argv[0]=pid;
+    new_argv[1]=COMMAND_NAME;
+    new_argv[2]=ANOTHER_KEY;
+    new_argv[3]=ipaddr;
+    new_argv[4]=&tmp_count;
+
+    for(int i=0;i<ninf->if_count;i++){
+        tmp_index[i]=(char)(ninf->if_index[i]);
+        new_argv[2*i+5]=&tmp_index[i];
+        new_argv[2*i+6]=ninf->if_name[i];
+        }
+        do_netns(2*(ninf->if_count)+5,new_argv);
+
+    return 0;
 }
