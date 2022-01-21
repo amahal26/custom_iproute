@@ -474,7 +474,7 @@ out:
     free_nlmsg_chain(ainfo);
     free_nlmsg_chain(&linfo);
     delete_json_obj();
-    return 0;
+    return ;
 }
 
 int coll_name(char **argv){
