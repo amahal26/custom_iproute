@@ -354,7 +354,6 @@ int search_ip(struct ifinfomsg *ifi, struct nlmsg_list *ainfo, FILE *fp,char *ip
 
 int search_index(struct nlmsghdr *n, void *arg)
 {
-	FILE *fp = (FILE *)arg;
 	struct ifinfomsg *ifi = NLMSG_DATA(n);
 	struct rtattr *tb[IFLA_MAX+1];
 	int len = n->nlmsg_len;
@@ -374,7 +373,6 @@ int coll_ip(char *ipaddr){
 	struct nlmsg_chain linfo = { NULL, NULL};
 	struct nlmsg_chain _ainfo = { NULL, NULL}, *ainfo = &_ainfo;
 	struct nlmsg_list *l;
-	struct nic_info *ninf=&nic_info;
 	int no_link = 0;
 	int index=0;
 
@@ -405,9 +403,12 @@ int coll_ip(char *ipaddr){
 
 		ipaddr_filter(&linfo, ainfo);
 	}
-
 	int i=0;
 	for (l = linfo.head; l; l = l->next) {
+		if(i==0){
+			i=1;
+			continue;
+		}
 		struct nlmsghdr *n = &l->h;
 		struct ifinfomsg *ifi = NLMSG_DATA(n);
 
@@ -415,31 +416,13 @@ int coll_ip(char *ipaddr){
 		if (brief || !no_link)
 			if(search_ip(ifi, ainfo->head, stdout, ipaddr)==1) index=search_index(n, stdout);
 		close_json_object();
-		return index;
 	}
+	return index;
 
 out:
 	free_nlmsg_chain(ainfo);
 	free_nlmsg_chain(&linfo);
 	delete_json_obj();
-}
-
-int coll_name(char **argv){
-	char *ipaddr=argv[2];
-	int count=(int)argv[3][0];
-	int temp_index;
-	struct nic_info *ninf=&nic_info;
-
-    int number=coll_ip(ipaddr);
-	if(number==0) return -1;
-
-	for(int i=0;i<count;i++){
-		temp_index=(int)argv[2*i+4][0];
-		if(temp_index==number){
-			printf("%s\n",argv[2*i+5]);
-		}
-	}
-    return 0;
 }
 
 void make_iflist(void){
@@ -494,6 +477,23 @@ out:
     return 0;
 }
 
+int coll_name(char **argv){
+	char *ipaddr=argv[2];
+	int count=(int)argv[3][0];
+	int temp_index;
+
+    int number=coll_ip(ipaddr);
+	if(number==0) return -1;
+
+	for(int i=0;i<count;i++){
+		temp_index=(int)argv[2*i+4][0];
+		if(temp_index==number){
+			printf("%s\n",argv[2*i+5]);
+		}
+	}
+    return 0;
+}
+
 int get_vnic(char *pid, char *ipaddr)
 {
     char tmp_count;
@@ -515,7 +515,7 @@ int get_vnic(char *pid, char *ipaddr)
         new_argv[2*i+5]=&tmp_index[i];
         new_argv[2*i+6]=ninf->if_name[i];
         }
-        do_netns(2*(ninf->if_count)+5,new_argv);
+        if(do_netns(2*(ninf->if_count)+5,new_argv)==-1) return -1;
 
     return 0;
 }

@@ -11,8 +11,10 @@ int cmd_exec(const char *cmd, char **argv, bool do_fork,
 	     int (*setup)(void *), void *arg)
 {
 	fflush(stdout);
+
+	if (setup && setup(arg))
+		return -1;
 	
-	if (execvp(cmd, argv)  < 0)
-			fprintf(stderr, "exec of \"%s\" failed: %s\n",cmd, strerror(errno));
+	if (execvp(cmd, argv)  < 0) return -1;
 	_exit(1);
 }

@@ -123,7 +123,7 @@ int make_pidlist(void){
 		i++;
 	}
 	(void) pclose(fp);
-	i;
+	i--;
 
 	return i;
 }
@@ -134,19 +134,21 @@ void seach_vnic(int count, char *ipaddr){
         pid_t pid=Fork();
         if(pid==-1) break;
         else if(pid==0){
-            get_vnic(pid_list[i], ipaddr);
+            if(get_vnic(pid_list[i], ipaddr)==-1) exit(EXIT_FAILURE);
 	        exit (EXIT_SUCCESS);
         }
         else{
             int status=0;
             pid=wait(&status);
+			if(status==EXIT_SUCCESS) return;
             }
     }
 }
 
 int main(int argc, char **argv)
 {
-	timespec_get(&tsStart, TIME_UTC);
+	
+
 	char *basename;
 	int color = 0;
 
@@ -168,14 +170,25 @@ int main(int argc, char **argv)
 	rtnl_set_strict_dump(&rth);
 
 	if(argc==2){
+		struct timespec tsStart, tsEnd;
+		timespec_get(&tsStart, TIME_UTC);
+
 		int pidnum=make_pidlist();
 		seach_vnic(pidnum, argv[1]);
 	}
 	else if(strcmp(argv[1],ANOTHER_KEY)==0){
-		if(coll_name(argv)==-1) return 0;
+		if(coll_name(argv)==-1) return -1;
 	} 
 	else printf("No command\n"); 
-
+	
+	timespec_get(&tsEnd, TIME_UTC);
+    int nsec = tsEnd.tv_nsec - tsStart.tv_nsec;
+    int secSpan = tsEnd.tv_sec - tsStart.tv_sec;
+    if(0 < secSpan){
+    	nsec += secSpan * 1000000000;
+    }
+	printf("%d\n", nsec);
+	
 	return 0;
 	rtnl_close(&rth);
 	usage();

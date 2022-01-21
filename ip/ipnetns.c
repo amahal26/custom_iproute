@@ -177,7 +177,7 @@ static int netns_exec(int argc, char **argv)
 		fprintf(stderr, "No netns name specified\n");
 		return -1;
 	}
-	return -cmd_exec(argv[1], argv + 1, false, do_switch, argv[0]);
+	return cmd_exec(argv[1], argv + 1, false, do_switch, argv[0]);
 }
 int do_netns(int argc, char **argv)
 {
