@@ -50,6 +50,7 @@ int max_flush_loops = 10;
 int batch_mode;
 bool do_all;
 char pid_list[1024][100];
+char integer[10]={0,1,2,3,4,5,6,7,8,9};
 
 struct rtnl_handle rth = { .fd = -1 };
 
@@ -98,6 +99,29 @@ void separate_space(char *s){
 	}
 }
 
+char* separate_ps(char *s){
+	char *p=s;
+	char pid[100];
+	int i=0;
+	bool id=false;
+	bool end=false;
+	while(end==false){
+		if((id==false)&&(p==' ')) continue;
+		else if((id==true)&&(end=true)) break;
+		else id=true;
+		for(int j=0; j<10; j++){
+			if(p==integer[j]){
+				pid[i]=p;
+				i++;
+				p+1;
+				break;
+			}
+		}
+		end=true;
+	}
+	return pid;
+}
+
 pid_t Fork(void){
 	pid_t	pid;
 
@@ -116,13 +140,39 @@ int make_pidlist(void){
 		exit(EXIT_FAILURE);
 	}
 	int i=0;
+	char tmp[1024][100];
 	while(!feof(fp)){
-		fgets(pid_list[i], sizeof(pid_list[i]), fp);
-		separate_enter(pid_list[i]);
-		separate_space(pid_list[i]);
+		fgets(tmp[i], sizeof(tmp[i]), fp);
+		separate_enter(tmp[i]);
+		separate_space(tmp[i]);
 		i++;
 	}
 	(void) pclose(fp);
+
+	for(int j=0; j<i-1; j++){
+		strcpy(pid_list[j],tmp[i-j+1]);
+	}
+	i--;
+
+	return i;
+}
+
+int make_pidlist_ps(void){
+	FILE *fp;
+	char *cmdline="ps h -A";
+	if((fp=popen(cmdline,"r"))==NULL){
+		perror("Searching pid command fail");
+		exit(EXIT_FAILURE);
+	}
+	int i=0;
+	char tmp[1024][100];
+	while(!feof(fp)){
+		fgets(tmp[i], sizeof(tmp[i]), fp);
+		strcpy(pid_list[i],separate_ps(tmp[i]));
+		i++;
+	}
+	(void) pclose(fp);
+
 	i--;
 
 	return i;
@@ -147,8 +197,8 @@ void seach_vnic(int count, char *ipaddr){
 
 int main(int argc, char **argv)
 {
+	struct timespec tsStart, tsEnd;
 	
-
 	char *basename;
 	int color = 0;
 
@@ -170,14 +220,15 @@ int main(int argc, char **argv)
 	rtnl_set_strict_dump(&rth);
 
 	if(argc==2){
-		struct timespec tsStart, tsEnd;
 		timespec_get(&tsStart, TIME_UTC);
 
-		int pidnum=make_pidlist();
+		//int pidnum=make_pidlist();
+		int pidnum=make_pidlist_ps();
 		seach_vnic(pidnum, argv[1]);
 	}
 	else if(strcmp(argv[1],ANOTHER_KEY)==0){
 		if(coll_name(argv)==-1) return -1;
+		else return 0;
 	} 
 	else printf("No command\n"); 
 	
@@ -188,8 +239,7 @@ int main(int argc, char **argv)
     	nsec += secSpan * 1000000000;
     }
 	printf("%d\n", nsec);
-	
-	return 0;
 	rtnl_close(&rth);
-	usage();
+
+	return 0;
 }
