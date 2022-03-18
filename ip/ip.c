@@ -50,7 +50,7 @@ int max_flush_loops = 10;
 int batch_mode;
 bool do_all;
 char pid_list[1024][100];
-char integer[10]={0,1,2,3,4,5,6,7,8,9};
+char integer[]={0,1,2,3,4,5,6,7,8,9};
 
 struct rtnl_handle rth = { .fd = -1 };
 
@@ -99,27 +99,10 @@ void separate_space(char *s){
 	}
 }
 
-char* separate_ps(char *s){
-	char *p=s;
-	char pid[100];
-	int i=0;
-	bool id=false;
-	bool end=false;
-	while(end==false){
-		if((id==false)&&(p==' ')) continue;
-		else if((id==true)&&(end=true)) break;
-		else id=true;
-		for(int j=0; j<10; j++){
-			if(p==integer[j]){
-				pid[i]=p;
-				i++;
-				p+1;
-				break;
-			}
-		}
-		end=true;
-	}
-	return pid;
+void separate_ps(char *s, int k){
+	strncpy(pid_list[k], s, 7);
+	separate_space(pid_list[k]);
+	return ;
 }
 
 pid_t Fork(void){
@@ -168,7 +151,7 @@ int make_pidlist_ps(void){
 	char tmp[1024][100];
 	while(!feof(fp)){
 		fgets(tmp[i], sizeof(tmp[i]), fp);
-		strcpy(pid_list[i],separate_ps(tmp[i]));
+		separate_ps(tmp,i);
 		i++;
 	}
 	(void) pclose(fp);
@@ -222,8 +205,8 @@ int main(int argc, char **argv)
 	if(argc==2){
 		timespec_get(&tsStart, TIME_UTC);
 
-		//int pidnum=make_pidlist();
-		int pidnum=make_pidlist_ps();
+		int pidnum=make_pidlist();
+		//int pidnum=make_pidlist_ps();
 		seach_vnic(pidnum, argv[1]);
 	}
 	else if(strcmp(argv[1],ANOTHER_KEY)==0){
